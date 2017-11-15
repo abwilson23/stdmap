@@ -32,7 +32,7 @@ def get_next_iterate(pt):
 
 # Plots the orbits of a set of randomly generated points under the standard map
 # Slow at the moment, need to optimize later
-def generate_plot(n):
+def std_map_plot(n):
     pts = get_points(n)
     plt.axis([0, Scale, 0, Scale])
     plt.title('K = {}'.format(K))
@@ -102,3 +102,57 @@ def compute_SVD(A):
     s_vals = list(reversed(sorted([math.sqrt(x) for x in s])))
     D = np.diag((s_vals))
     return (U, D, np.transpose(V))
+
+#=======================================================================================#
+# Two one one map section, need to amalgamate all of this rather than having it be a 
+# separate set of similar functions.
+#=======================================================================================#
+
+def two_one_map_of(pt):
+    x_t, y_t = pt[0], pt[1]
+    x_n = (2*x_t + y_t) % Scale
+    y_n = (x_t + y_t) % Scale
+    return ((x_n, y_n))
+
+def two_one_map_plot(n):
+    pts = get_points(n)
+    plt.axis([0, Scale, 0, Scale])
+    plt.title('Two-one-one Map')
+    orbits = []
+    for i in range(len(pts)):
+        orbits = orbits + get_two_one_orbit(pts[i])
+    for pt in orbits:
+        plt.scatter(pt[0], pt[1], c='black', s = 1)
+    plt.savefig('Two-one-map, n = {}'.format(n))
+    plt.axes().set_aspect('equal', 'datalim')
+    plt.show(block=True)
+    
+def get_two_one_orbit(pt): 
+    orbit = []
+    tmp = pt
+    for n in range(N):
+        orbit.append(tmp)
+        tmp = two_one_map_of(tmp)
+    return orbit
+
+def get_jacobian_two(y):
+    return (np.matrix('2 1; 1 1')
+
+def find_fast_subspace_two(pt, vec):
+    tmp = pt
+    v = np.matrix('{};{}'.format(vec[0], vec[1]))
+    J = get_jacobian_two(pt[1])
+    for i in range(0, N):
+        J = J*J
+    return J*v
+    
+# Compute J^N at pt, then take the SVD of J^N to find the Lyapunoov exponents
+def L_exponents_two(pt):
+    tmp = pt 
+    J = get_jacobian_two(pt[1])
+    for i in range(0,N):
+        J = J*J
+    (U,D,V) = compute_SVD(J)
+    l1 = np.log(D[0,0])/float(N)
+    l2 = (-1)*l1 
+    print ('Lambda_1 is {}, and Lambda_2 is {}'.format(l1, l2))
