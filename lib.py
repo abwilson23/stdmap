@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 # N = the number of iterations used in most of the functions
 # K = a constant which alters the dynamics of the system
-N = 1000
+N = 100
 K = 1.2
 Scale = 1
 
@@ -45,6 +45,9 @@ def generate_plot(n):
     plt.axes().set_aspect('equal', 'datalim')
     plt.show(block=True)
 
+# Add a function T which returns T(x,y) to refactor and tidy up
+# def T(x,y):
+
 # Generate a set of n random starting points. Use these as initial points in orbits.
 def get_points(n):
     pts = []
@@ -67,21 +70,28 @@ def compute_jacobian(pt):
 def get_jacobian(y):
     return (np.matrix([[1, K*np.cos(y)], [1, 1 + K*np.cos(y)]]))
 
-# Find Jacobian
-def find_fast_subspace(pt):
-    v = np.matrix('1;1')
+# Choose an arbitrary (pt, v) \in Tangent manifold, compute J^N(pt), then apply 
+# J^N to v to find the fast subspace
+def find_fast_subspace(pt, vec):
+    tmp = pt
+    v = np.matrix('{};{}'.format(vec[0], vec[1]))
+    J = get_jacobian(pt[1])
     for i in range(0, N):
-        J = get_jacobian(v.item((1,0)))
-        J = J*v
-    return v
+        tmp = get_next_iterate(pt)
+        J = J*get_jacobian(tmp[1])
+    return J*v
     
+# Compute J^N at pt, then take the SVD of J^N to find the Lyapunoov exponents
 def L_exponents(pt):
-    v = pt
-    J = get_jacobian(v[1])
+    tmp = pt 
+    J = get_jacobian(pt[1])
     for i in range(0,N):
-        v = get_next_iterate(v)
-        J = get_jacobian(v[1])*J
-    return J
+        tmp = get_next_iterate(pt)
+        J = J*get_jacobian(tmp[1])
+    (U,D,V) = compute_SVD(J)
+    l1 = np.log(D[0,0])/float(N)
+    l2 = (-1)*l1 
+    print ('Lambda_1 is {}, and Lambda_2 is {}'.format(l1, l2))
 
 # Here we assume that det(A)=1 and that a_ij < 1000
 # Computes the SVD decomposition of a matrix by looking at the eigenvectors of
