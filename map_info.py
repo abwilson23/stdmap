@@ -16,7 +16,8 @@ import numpy as np
 #======================================================================================#
 
 # K = a constant which alters the dynamics of the system
-K = 1
+e = 0.1
+K = 1.2
 Scale = 1
 
 def std_map_next(pt):
@@ -38,6 +39,18 @@ def two_one_map_next(pt):
     y_n = (x_t + y_t) % Scale
     return ((x_n, y_n))
 
-def two_one_one_map_jacobian(y):
-    return (np.matrix('2 1; 1 1')
+def two_one_map_jacobian(pt):
+    return (np.matrix('2 1; 1 1'))
 
+#=======================================================================================#
+#                       The Two-One-One Map (with perturbation)                         #
+#=======================================================================================#
+
+def two_one_map_perturbed_next(pt):
+    x_t, y_t = pt[0], pt[1]
+    x_n = (2*x_t + y_t + e*np.cos(2*np.pi*x_t)) % Scale
+    y_n = (x_t + y_t + e*np.cos(2*np.pi*x_t)) % Scale
+    return ((x_n, y_n))
+
+def two_one_map_perturbed_jacobian(pt):
+    return (np.matrix([[2-2*np.pi*e*np.sin(2*np.pi*pt[0]), 1], [1-2*np.pi*e*np.sin(2*np.pi*pt[0]), 1]]))

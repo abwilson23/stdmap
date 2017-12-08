@@ -4,10 +4,26 @@ import math
 import numpy as np
 from numpy import linalg as LA
 import matplotlib.pyplot as plt
+import map_info as m
 
 # N = the number of iterations used in most of the functions
-N = 100
+K = 1.2
+N = 30
 Scale = 1
+
+
+#=================================================================================#
+#                                Map Class                                        #
+#=================================================================================#
+
+# To add new maps, provide next_iterate and get_jacobian functions in the map_info.py
+# module. 
+class Map:
+
+    def __init__(self, next_iterate, get_jacobian, p=0):
+        self.next = next_iterate
+        self.jacobian = get_jacobian
+        self.p = p 
 
 #=================================================================================#
 #                                 Plotting                                        #
@@ -53,8 +69,8 @@ def find_fast_subspace(Map, pt, vec):
     v = np.matrix('{};{}'.format(vec[0], vec[1]))
     J = np.eye(2) # Assume we're dealing with 2x2's
     for i in range(0, N):
-        J = J*Map.jacobian(tmp[1])
-        tmp = Map.next(pt)
+        J = J*Map.jacobian(tmp)
+        tmp = Map.next(tmp)
     return J*v
 #_______________________________________________________________________________#
 
@@ -62,14 +78,14 @@ def find_fast_subspace(Map, pt, vec):
 # Compute J^N at pt, then take the SVD of J^N to find the Lyapunov exponents
 def L_exponents(Map, pt):
     tmp = pt 
-    J = np.eye(n) # Assume 2x2
+    J = np.eye(2) # Assume 2x2
     for i in range(0, N):
-        J = J*Map.jacobian(tmp[1])
+        J = J*Map.jacobian(tmp)
         tmp = Map.next(pt)
     (U,D,V) = compute_SVD(J)
     l1 = np.log(D[0,0])/float(N)
-    l2 = (-1)*l1 
-    print ('Lambda_1 is {}, and Lambda_2 is {}'.format(l1, l2))
+    l2 = np.log(D[1,1])/float(N)
+    print ('Lambda_1 = {} \nLambda_2 = {}.'.format(l1, l2))
 
 # Here we assume that det(A)=1 and that a_ij < 1000
 # Computes the SVD decomposition of a matrix by looking at the eigenvectors of
@@ -81,10 +97,3 @@ def compute_SVD(A):
     D = np.diag((s_vals))
     return (U, D, np.transpose(V))
 
-# To add new maps, provide next_iterate and get_jacobian functions in the map_info.py
-# module. 
-class Map:
-
-    def __init__(self, next_iterate, get_jacobian)
-        self.next = next_iterate
-        self.jacobian = get_jacobian
