@@ -8,7 +8,7 @@ import map_info as m
 
 # N = the number of iterations used in most of the functions
 K = 1.2
-N = 30
+N = 12
 Scale = 1
 
 
@@ -33,7 +33,7 @@ class Map:
 def get_orbit(Map, pt): 
     orbit = []
     tmp = (pt[0], pt[1])
-    for n in range(N):
+    for n in range(100):
         orbit.append(tmp)
         tmp = Map.next(tmp)
     return orbit

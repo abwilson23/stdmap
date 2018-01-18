@@ -16,10 +16,11 @@ import numpy as np
 #======================================================================================#
 
 # K = a constant which alters the dynamics of the system
-e = 0.1
+e = 0.01
 K = 1.2
 Scale = 1
 
+# Assuming points in R^2
 def std_map_next(pt):
     y = (pt[1] + K/(2*np.pi)*np.sin(2*np.pi*pt[0])) % Scale
     x = (pt[0] + y) % Scale
@@ -27,7 +28,6 @@ def std_map_next(pt):
 
 def std_map_jacobian(pt):
     return (np.matrix([[1, K*np.cos(pt[1])], [1, 1 + K*np.cos(pt[1])]]))
-
 
 #=======================================================================================#
 #                               The Two-One-One Map                                     #
