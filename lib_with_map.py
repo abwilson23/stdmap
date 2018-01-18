@@ -62,18 +62,44 @@ def plot(Map, n):
     plt.axes().set_aspect('equal', 'datalim')
     plt.show(block=True)
 
-# Choose an arbitrary (pt, v) \in Tangent manifold, compute J^N(pt), then apply 
-# J^N to v to find the fast subspace
-def find_fast_subspace(Map, pt, vec):
+
+#=================================================================================#
+#                           Fast/Slow Spaces                                      #
+#=================================================================================#
+
+def get_jacobian_iterate(Map, pt, n):
     tmp = pt
-    v = np.matrix('{};{}'.format(vec[0], vec[1]))
     J = np.eye(2) # Assume we're dealing with 2x2's
-    for i in range(0, N):
+    for i in range(0, n):
         J = J*Map.jacobian(tmp)
         tmp = Map.next(tmp)
-    return J*v
-#_______________________________________________________________________________#
+    return J
+    
+# Choose an arbitrary (pt, v) \in Tangent manifold, compute J^N(pt), then apply 
+# J^N to v to find the fast subspace
+def find_fastspace(Map, pt, vec, n):
+    v = np.matrix('{};{}'.format(vec[0], vec[1]))
+    J = get_jacobian_iterate(Map, pt, n)
+    return (normalize(J*v))
 
+def find_slowspace(Map, pt, n):
+    v = np.matrix('0;1')
+    J = get_jacobian_iterate(Map, pt, n)
+    return (normalize(np.linalg.solve(J, v)))
+
+def get_info(Map, pt, vec, n):
+    print ('Fast subspace: \n{}\n'.format(find_fastspace(Map, pt, vec, n)))
+    print ('Slow subspace: \n{}\n'.format(find_slowspace(Map, pt, n)))
+    L_exponents(Map, pt)
+
+def normalize(vec):
+    n = LA.norm(vec)
+    v = np.matrix('{};{}'.format(vec[0,0]/n, vec[1,0]/n))
+    return (v)
+
+#=================================================================================#
+#                           SVD and Lyapunov Exponents                            #
+#=================================================================================#
 
 # Compute J^N at pt, then take the SVD of J^N to find the Lyapunov exponents
 def L_exponents(Map, pt):
