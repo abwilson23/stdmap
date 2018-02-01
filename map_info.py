@@ -11,12 +11,26 @@ import numpy as np
 #======================================================================================#
 
 
+#=================================================================================#
+#                                Map Class                                        #
+#=================================================================================#
+
+# To add new maps, provide next_iterate and get_jacobian functions in the map_info.py
+# module. 
+class Map:
+
+    def __init__(self, next_iterate, get_jacobian, p=0):
+        self.next = next_iterate
+        self.jacobian = get_jacobian
+        self.p = p 
+
+
 #======================================================================================#
 #                           The Standard Map of the Torus                              #
 #======================================================================================#
 
 # K = a constant which alters the dynamics of the system
-e = 0.01
+e = 0.1
 K = 1.2
 Scale = 1
 
@@ -54,3 +68,12 @@ def two_one_map_perturbed_next(pt):
 
 def two_one_map_perturbed_jacobian(pt):
     return (np.matrix([[2-2*np.pi*e*np.sin(2*np.pi*pt[0]), 1], [1-2*np.pi*e*np.sin(2*np.pi*pt[0]), 1]]))
+
+#======================================================================================#
+#                           Initialized Map Classes                                    #
+#======================================================================================#
+
+std = Map(std_map_next, std_map_jacobian)
+t1 = Map(two_one_map_next, two_one_map_jacobian)
+tp = Map(two_one_map_perturbed_next, two_one_map_perturbed_jacobian)
+
