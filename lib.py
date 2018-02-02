@@ -6,23 +6,22 @@ from numpy import linalg as LA
 import matplotlib.pyplot as plt
 import map_info as m
 
-# N = the number of iterations used in most of the functions
-K = 1.2
-N = 10
+K = 1.2 
+N = 25 # Number of extra points added to orbit for fastpace computations
 Scale = 1
-orbit_len = 100
+# orbit_len = 100
 
 #=================================================================================#
 #                                 Plotting                                        #
 #=================================================================================#
 
-# smaller dot size
-
 # Computes orbit of a point under the given mapping Map
 def get_orbit(Map, pt, orbit_len): 
     orbit = []
     tmp = (pt[0], pt[1])
-    for n in range(orbit_len):
+    # We take extra points in order to look back in time when computing the 
+    # fastspace for x_n, n >= 0.
+    for n in range(orbit_len+N): 
         orbit.append(tmp)
         tmp = Map.next(tmp)
     return orbit
@@ -49,65 +48,50 @@ def plot(Map, n, orbit_len):
         plt.scatter(pt[0], pt[1], c='black', s = 1)
     plt.savefig('./K={}.png'.format(K)) # Change this title later
     plt.axes().set_aspect('equal', 'datalim')
-    plt.show(block=True)
+    plt.show(block=True) 
 
-#def quiver_plot(Map):
-#    pt = get_points(1)[0]
-#    vec = (0.2, 0.5)
-#    fast_v = find_fastspace(Map, pt, vec, 9)
-#    fast_vec = (fast_v[0,0], fast_v[1,0])
-#    fast = [fast_vec] * orbit_len
-#    slow = []
-#    orbit = get_orbit(Map, pt) 
-#    for pt in orbit:
-#        slow.append(find_slowspace(Map, pt, 10))
-#    X, Y = zip(*orbit)
-#    U, V = zip(*fast)
-#    plt.figure()
-#    #plt.quiver(X, Y, U, V, angles='xy', scale=30, color='r', headwidth='2', headlength='1')
-#    for pt in orbit:
-#        plt.scatter(pt[0], pt[1], c='black', s = 1)
-#    plt.quiver(X, Y, U, V, width=0.001, headwidth='20', headlength='20', color='r')
-#    plt.show()
-    
-def plot_all(Map, n, orbit_len):
+def plot_with_spaces(Map, n, orbit_len, flag):
     pts = get_points(n)
     plt.axis([0, Scale, 0, Scale])
     for pt in pts:
-        plot_orbit(Map, pt, orbit_len, plt)
+        plot_orbit(Map, pt, orbit_len, plt, flag)
     plt.savefig('./arrows.png'.format(K)) 
     plt.axes().set_aspect('equal', 'datalim') # fix scaling when stretching windows
     plt.show()
 
-def plot_orbit(Map, pt, orbit_len, plt):
+def plot_orbit(Map, pt, orbit_len, plt, flag):
     # Plots the points along the orbit
     orbit = get_orbit(Map, pt, orbit_len)
-    for pt in orbit:
-        plt.scatter(pt[0], pt[1], c='black', s = 0.5)
+    for pt in orbit[25:]: # We only look at the last orbit_len number of points
+        plt.scatter(pt[0], pt[1], c='black', s = 0.1)
+    if flag[0] == 1:
+        plot_fastspace(Map, orbit, plt)
+    if flag[1] == 1:
+        plot_slowspace(Map, orbit, plt)
 
-    plot_fastspace(Map, orbit, plt)
-    plot_slowspace(Map, orbit, plt)
-
-# Plot the fastspace at each point, only need fastspace at the first point of orbit
+# Plot the fastspace at each point, 
 def plot_fastspace(Map, orbit, plt):
-    vec = get_points(1)[0]
+    K = 25 # Power of jacobian product in find_fastspace
+    vec = get_points(1)[0] # Get one random vector in tangent space of x_0
     fast = []
-    for pt in orbit:
-        tmp = find_fastspace(Map, pt, vec, 25)
+    for i in range(len(orbit)-N):
+        # finds the fastspace over the point orbit[i+N]
+        tmp = find_fastspace(Map, orbit[i], vec, K)
         fast_v = (tmp[0,0], tmp[1,0])
         fast.append(fast_v)
-    x,y = zip(*orbit)
+    x,y = zip(*orbit[25:])
     u,v = zip(*fast)
     plt.quiver(x, y, u, v, width=0.001, headwidth='10', headlength='10', color='r')
 
 # Plot the slowspace at each point
 def plot_slowspace(Map, orbit, plt):
+    K = 25
     slow = []
-    for pt in orbit:
-        tmp = find_slowspace(Map, pt, 10)
+    for pt in orbit[25:]:
+        tmp = find_slowspace(Map, pt, K)
         slow_v = (tmp[0,0], tmp[1,0])
         slow.append(slow_v)
-    x,y = zip(*orbit)
+    x,y = zip(*orbit[25:])
     u,v = zip(*slow)
     plt.quiver(x, y, u, v, width=0.001, headwidth='10', headlength='10', color='b')
 
@@ -120,31 +104,27 @@ def get_jacobian_iterate(Map, pt, n):
     J = np.eye(2) # Assume we're dealing with 2x2's
     for i in range(0, n):
         J = Map.jacobian(tmp)*J
+        if check_matrix_size(J):
+            break
         tmp = Map.next(tmp)
     return J
-    
-# Choose an arbitrary (pt, v) \in Tangent manifold, compute J^N(pt), then apply 
-# J^N to v to find the fast subspace. Plot the result of find_fastspace over x_25 = T^25(x_0). 
-def find_fastspace(Map, pt, vec, n):
+
+# If pt = x_0, this finds the fastspace of x_25
+def find_fastspace(Map, pt, vec, K):
     v = np.matrix('{};{}'.format(vec[0], vec[1]))
-    J = get_jacobian_iterate(Map, pt, n)
+    J = get_jacobian_iterate(Map, pt, K)
     return (normalize(J*v))
 
 def find_slowspace(Map, pt, n):
-    v = np.matrix('0;1')
+    v = np.matrix('0;1') # This is in the tangent space of x_25 if pt=x_0
     J = get_jacobian_iterate(Map, pt, n)
     return (normalize(np.linalg.solve(J, v)))
 
+# This function needs to be redone as find_fastspace doesn't behave nicely anymore. 
 def get_info(Map, pt, vec, n):
     print ('Fast subspace: \n{}\n'.format(find_fastspace(Map, pt, vec, n)))
     print ('Slow subspace: \n{}\n'.format(find_slowspace(Map, pt, n)))
     L_exponents(Map, pt)
-
-def normalize(vec):
-    n = LA.norm(vec)
-    assert n != 0
-    v = np.matrix('{};{}'.format(vec[0,0]/n, vec[1,0]/n))
-    return (v)
 
 #=================================================================================#
 #                           SVD and Lyapunov Exponents                            #
@@ -152,6 +132,7 @@ def normalize(vec):
 
 # Compute J^N at pt, then take the SVD of J^N to find the Lyapunov exponents
 def L_exponents(Map, pt):
+    N = 10
     tmp = pt 
     J = np.eye(2) # Assume 2x2
     for i in range(0, N):
@@ -172,3 +153,19 @@ def compute_SVD(A):
     D = np.diag((s_vals))
     return (U, D, np.transpose(V))
 
+#=================================================================================#
+#                           Helper Functions                                      #
+#=================================================================================#
+
+def normalize(vec):
+    n = LA.norm(vec)
+    assert n != 0
+    v = np.matrix('{};{}'.format(vec[0,0]/n, vec[1,0]/n))
+    return (v)
+
+def check_matrix_size(A):
+    l = [A[0,0], A[0,1], A[1,0], A[1,1]]
+    for x in l:
+        if len(str(x)) > 20:
+            return True 
+    return False
