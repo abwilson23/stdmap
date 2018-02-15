@@ -5,8 +5,8 @@ import numpy as np
 from numpy import linalg as LA
 import matplotlib.pyplot as plt
 import map_info as m
+import importlib as imp
 
-K = 1.2 
 N = 25 # Number of extra points added to orbit for fastpace computations
 Scale = 1
 # orbit_len = 100
@@ -23,12 +23,14 @@ def get_orbit(Map, pt, orbit_len):
     # fastspace for x_n, n >= 0.
     for n in range(orbit_len+N): 
         orbit.append(tmp)
+        print (tmp)
         tmp = Map.next(tmp)
     return orbit
 
 # Generate a set of n random starting points. Use these as initial points in orbits.
 def get_points(n):
     pts = []
+    np.random.seed()
     a = np.random.rand(n, 2)
     for i in range(n):
         pt = (a[i, 0], a[i, 1])
@@ -55,7 +57,7 @@ def plot_with_spaces(Map, n, orbit_len, flag):
     plt.axis([0, Scale, 0, Scale])
     for pt in pts:
         plot_orbit(Map, pt, orbit_len, plt, flag)
-    plt.savefig('./arrows.png'.format(K)) 
+    plt.savefig('./std_slow/n={}_K={}.png'.format(n, Map.K)) 
     plt.axes().set_aspect('equal', 'datalim') # fix scaling when stretching windows
     plt.show()
 
@@ -94,6 +96,13 @@ def plot_slowspace(Map, orbit, plt):
     x,y = zip(*orbit[25:])
     u,v = zip(*slow)
     plt.quiver(x, y, u, v, width=0.001, headwidth='10', headlength='10', color='b')
+
+def gen_std_plots():
+    std = m.std
+    for K in [0.6, 0.971635, 1.2, 2.0]:
+        std.K = K
+        for n in [1, 10, 50]:
+            plot_with_spaces(std, n, 50, (0,1))
 
 #=================================================================================#
 #                           Fast/Slow Spaces                                      #
@@ -163,9 +172,10 @@ def normalize(vec):
     v = np.matrix('{};{}'.format(vec[0,0]/n, vec[1,0]/n))
     return (v)
 
-def check_matrix_size(A):
+# Divide out the entries by the norm and keep running
+def check_matrix_size(A): 
     l = [A[0,0], A[0,1], A[1,0], A[1,1]]
     for x in l:
-        if len(str(x)) > 20:
-            return True 
+        if len(str(x)) > 12:
+            return True
     return False

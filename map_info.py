@@ -19,10 +19,16 @@ import numpy as np
 # module. 
 class Map:
 
-    def __init__(self, next_iterate, get_jacobian, p=0):
-        self.next = next_iterate
-        self.jacobian = get_jacobian
-        self.p = p 
+    def __init__(self, next_iterate, get_jacobian, K_val=0):
+        self.next_it = next_iterate
+        self.jac = get_jacobian
+        self.K = K_val
+
+    def next(pt):
+        return (next_it(pt, K))
+
+    def jacobian(pt):
+        return (jac(pt, K))
 
 
 #======================================================================================#
@@ -31,42 +37,41 @@ class Map:
 
 # K = a constant which alters the dynamics of the system
 e = 0.1
-K = 1.2
 Scale = 1
 
 # Assuming points in R^2
-def std_map_next(pt):
+def std_map_next(pt, K):
     y = (pt[1] + K/(2*np.pi)*np.sin(2*np.pi*pt[0])) % Scale
     x = (pt[0] + y) % Scale
     return ((x, y))
 
-def std_map_jacobian(pt):
-    return (np.matrix([[1, K*np.cos(pt[1])], [1, 1 + K*np.cos(pt[1])]]))
+def std_map_jacobian(pt, K):
+    return (np.matrix([[K*np.cos(2*np.pi*pt[1]), 1], [1 + K*np.cos(2*np.pi*pt[1]), 1]]))
 
 #=======================================================================================#
 #                               The Two-One-One Map                                     #
 #=======================================================================================#
 
-def two_one_map_next(pt):
+def two_one_map_next(pt, K):
     x_t, y_t = pt[0], pt[1]
     x_n = (2*x_t + y_t) % Scale
     y_n = (x_t + y_t) % Scale
     return ((x_n, y_n))
 
-def two_one_map_jacobian(pt):
+def two_one_map_jacobian(pt, K):
     return (np.matrix('2 1; 1 1'))
 
 #=======================================================================================#
 #                       The Two-One-One Map (with perturbation)                         #
 #=======================================================================================#
 
-def two_one_map_perturbed_next(pt):
+def two_one_map_perturbed_next(pt, K):
     x_t, y_t = pt[0], pt[1]
     x_n = (2*x_t + y_t + e*np.cos(2*np.pi*x_t)) % Scale
     y_n = (x_t + y_t + e*np.cos(2*np.pi*x_t)) % Scale
     return ((x_n, y_n))
 
-def two_one_map_perturbed_jacobian(pt):
+def two_one_map_perturbed_jacobian(pt, K):
     return (np.matrix([[2-2*np.pi*e*np.sin(2*np.pi*pt[0]), 1], [1-2*np.pi*e*np.sin(2*np.pi*pt[0]), 1]]))
 
 #======================================================================================#
