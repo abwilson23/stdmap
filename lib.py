@@ -23,7 +23,6 @@ def get_orbit(Map, pt, orbit_len):
     # fastspace for x_n, n >= 0.
     for n in range(orbit_len+N): 
         orbit.append(tmp)
-        print (tmp)
         tmp = Map.next(tmp)
     return orbit
 
@@ -57,7 +56,7 @@ def plot_with_spaces(Map, n, orbit_len, flag):
     plt.axis([0, Scale, 0, Scale])
     for pt in pts:
         plot_orbit(Map, pt, orbit_len, plt, flag)
-    plt.savefig('./std_slow/n={}_K={}.png'.format(n, Map.K)) 
+    plt.savefig('./std_slow/n={}_K={}.png'.format(n, Map.k)) 
     plt.axes().set_aspect('equal', 'datalim') # fix scaling when stretching windows
     plt.show()
 

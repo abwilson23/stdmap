@@ -3,82 +3,70 @@
 import math
 import numpy as np
 
+SCALE = 1
+
 #======================================================================================#
-# The following sections describe the behaviour of different maps that we are          #
-# interested in studying. In particular, the first function of each section provides   #
-# the next iterate of the map and the second function provides the jacobian. This      #
-# module is used to aid in creation of map objects in the lib.py module.               #
+#                                Map Class                                             #
 #======================================================================================#
 
 
-#=================================================================================#
-#                                Map Class                                        #
-#=================================================================================#
+class Map: 
 
-# To add new maps, provide next_iterate and get_jacobian functions in the map_info.py
-# module. 
-class Map:
-
-    def __init__(self, next_iterate, get_jacobian, K_val=0):
-        self.next_it = next_iterate
-        self.jac = get_jacobian
-        self.K = K_val
-
-    def next(pt):
-        return (next_it(pt, K))
-
-    def jacobian(pt):
-        return (jac(pt, K))
-
+    def __init__(self, k=0):
+        self.k = k
 
 #======================================================================================#
 #                           The Standard Map of the Torus                              #
 #======================================================================================#
 
-# K = a constant which alters the dynamics of the system
-e = 0.1
-Scale = 1
+class StdMap(Map):
+    
+    def next(self, pt):
+        y = (pt[1] + self.k/(2*np.pi)*np.sin(2*np.pi*pt[0])) % SCALE
+        x = (pt[0] + y) % SCALE
+        return (x, y)
 
-# Assuming points in R^2
-def std_map_next(pt, K):
-    y = (pt[1] + K/(2*np.pi)*np.sin(2*np.pi*pt[0])) % Scale
-    x = (pt[0] + y) % Scale
-    return ((x, y))
-
-def std_map_jacobian(pt, K):
-    return (np.matrix([[K*np.cos(2*np.pi*pt[1]), 1], [1 + K*np.cos(2*np.pi*pt[1]), 1]]))
+    def jacobian(self, pt):
+        return np.matrix([[self.k*np.cos(2*np.pi*pt[1]), 1], 
+                        [1 + self.k*np.cos(2*np.pi*pt[1]), 1]])
 
 #=======================================================================================#
 #                               The Two-One-One Map                                     #
 #=======================================================================================#
 
-def two_one_map_next(pt, K):
-    x_t, y_t = pt[0], pt[1]
-    x_n = (2*x_t + y_t) % Scale
-    y_n = (x_t + y_t) % Scale
-    return ((x_n, y_n))
+class TwoOneMap(Map):
 
-def two_one_map_jacobian(pt, K):
-    return (np.matrix('2 1; 1 1'))
+    def next(self, pt):
+        x_t, y_t = pt[0], pt[1]
+        x_n = (2*x_t + y_t) % SCALE
+        y_n = (x_t + y_t) % SCALE
+        return (x_n, y_n)
+
+    def jacobian(self, pt):
+        return np.matrix('2 1; 1 1')
 
 #=======================================================================================#
 #                       The Two-One-One Map (with perturbation)                         #
 #=======================================================================================#
 
-def two_one_map_perturbed_next(pt, K):
-    x_t, y_t = pt[0], pt[1]
-    x_n = (2*x_t + y_t + e*np.cos(2*np.pi*x_t)) % Scale
-    y_n = (x_t + y_t + e*np.cos(2*np.pi*x_t)) % Scale
-    return ((x_n, y_n))
+class TwoOnePertMap(Map):
 
-def two_one_map_perturbed_jacobian(pt, K):
-    return (np.matrix([[2-2*np.pi*e*np.sin(2*np.pi*pt[0]), 1], [1-2*np.pi*e*np.sin(2*np.pi*pt[0]), 1]]))
+    def next(self, pt):
+        x_t, y_t = pt[0], pt[1]
+        x_n = (2*x_t + y_t + self.k*np.cos(2*np.pi*x_t)) % SCALE
+        y_n = (x_t + y_t + self.k*np.cos(2*np.pi*x_t)) % SCALE
+        return ((x_n, y_n))
+
+    def jacobian(self, pt):
+        return np.matrix([[2-2*np.pi*self.k*np.sin(2*np.pi*pt[0]), 1], 
+                        [1-2*np.pi*self.k*np.sin(2*np.pi*pt[0]), 1]])
+
 
 #======================================================================================#
 #                           Initialized Map Classes                                    #
 #======================================================================================#
 
-std = Map(std_map_next, std_map_jacobian)
-t1 = Map(two_one_map_next, two_one_map_jacobian)
-tp = Map(two_one_map_perturbed_next, two_one_map_perturbed_jacobian)
+std = StdMap(k=1.2)
+t1 = TwoOneMap()
+tp = TwoOnePertMap(k=0.01)
 
