@@ -9,7 +9,6 @@ import importlib as imp
 
 N = 25 # Number of extra points added to orbit for fastpace computations
 Scale = 1
-# orbit_len = 100
 
 #=================================================================================#
 #                                 Plotting                                        #
@@ -36,35 +35,22 @@ def get_points(n):
         pts.append(pt)
     return pts
 
-# Plots the orbits of a set of randomly generated points under the given map
-# Slow at the moment, need to optimize later
-def plot(Map, n, orbit_len):
+# Lightning fast now
+def plot(Map, n, orbit_len, flag):
     pts = get_points(n)
     plt.axis([0, Scale, 0, Scale])
-    plt.title('K = {}'.format(K))
-    orbits = []
-    for i in range(len(pts)):
-        orbits = orbits + get_orbit(Map, pts[i], orbit_len)
-    for pt in orbits:
-        plt.scatter(pt[0], pt[1], c='black', s = 1)
-    plt.savefig('./K={}.png'.format(K)) # Change this title later
-    plt.axes().set_aspect('equal', 'datalim')
-    plt.show(block=True) 
-
-def plot_with_spaces(Map, n, orbit_len, flag):
-    pts = get_points(n)
-    plt.axis([0, Scale, 0, Scale])
+    plt.title('K = {}'.format(Map.k))
     for pt in pts:
         plot_orbit(Map, pt, orbit_len, plt, flag)
-    plt.savefig('./std_slow/n={}_K={}.png'.format(n, Map.k)) 
-    plt.axes().set_aspect('equal', 'datalim') # fix scaling when stretching windows
-    plt.show()
+    plt.savefig('./K={}.png'.format(Map.k)) 
+    plt.axes().set_aspect('equal', 'datalim')
+    plt.show(block=True) 
 
 def plot_orbit(Map, pt, orbit_len, plt, flag):
     # Plots the points along the orbit
     orbit = get_orbit(Map, pt, orbit_len)
-    for pt in orbit[25:]: # We only look at the last orbit_len number of points
-        plt.scatter(pt[0], pt[1], c='black', s = 0.1)
+    x,y = zip(*orbit[25:])
+    plt.scatter(x, y, c='black', s = 0.1)
     if flag[0] == 1:
         plot_fastspace(Map, orbit, plt)
     if flag[1] == 1:
@@ -96,12 +82,12 @@ def plot_slowspace(Map, orbit, plt):
     u,v = zip(*slow)
     plt.quiver(x, y, u, v, width=0.001, headwidth='10', headlength='10', color='b')
 
-def gen_std_plots():
-    std = m.std
-    for K in [0.6, 0.971635, 1.2, 2.0]:
-        std.K = K
-        for n in [1, 10, 50]:
-            plot_with_spaces(std, n, 50, (0,1))
+#def gen_std_plots():
+#    std = m.std
+#    for K in [0.6, 0.971635, 1.2, 2.0]:
+#        std.K = K
+#        for n in [1, 10, 50]:
+#            plot_with_spaces(std, n, 50, (0,1))
 
 #=================================================================================#
 #                           Fast/Slow Spaces                                      #
@@ -111,9 +97,8 @@ def get_jacobian_iterate(Map, pt, n):
     tmp = pt
     J = np.eye(2) # Assume we're dealing with 2x2's
     for i in range(0, n):
+        J = check_matrix_size(J)
         J = Map.jacobian(tmp)*J
-        if check_matrix_size(J):
-            break
         tmp = Map.next(tmp)
     return J
 
@@ -171,10 +156,12 @@ def normalize(vec):
     v = np.matrix('{};{}'.format(vec[0,0]/n, vec[1,0]/n))
     return (v)
 
-# Divide out the entries by the norm and keep running
+# If the matrix is too large, normalize its entries by dividing through by the sup norm. 
 def check_matrix_size(A): 
     l = [A[0,0], A[0,1], A[1,0], A[1,1]]
-    for x in l:
-        if len(str(x)) > 12:
-            return True
-    return False
+    m = max(l)
+    if len(str(m)) > 7:
+        tmp = [x/m for x in l]
+        return np.matrix([[tmp[0], tmp[1]], [tmp[2], tmp[3]]])
+    else:
+        return A

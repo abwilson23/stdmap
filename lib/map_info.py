@@ -20,15 +20,16 @@ class Map:
 #======================================================================================#
 
 class StdMap(Map):
-    
+
     def next(self, pt):
+        x = (pt[0] + pt[1] + (self.k/(2*np.pi))*np.sin(2*np.pi*pt[0])) % SCALE
         y = (pt[1] + self.k/(2*np.pi)*np.sin(2*np.pi*pt[0])) % SCALE
-        x = (pt[0] + y) % SCALE
         return (x, y)
 
     def jacobian(self, pt):
-        return np.matrix([[self.k*np.cos(2*np.pi*pt[1]), 1], 
-                        [1 + self.k*np.cos(2*np.pi*pt[1]), 1]])
+        return np.matrix([[1+self.k*np.cos(2*np.pi*pt[0]), 1], 
+                        [self.k*np.cos(2*np.pi*pt[0]), 1]])
+
 
 #=======================================================================================#
 #                               The Two-One-One Map                                     #
@@ -60,7 +61,6 @@ class TwoOnePertMap(Map):
     def jacobian(self, pt):
         return np.matrix([[2-2*np.pi*self.k*np.sin(2*np.pi*pt[0]), 1], 
                         [1-2*np.pi*self.k*np.sin(2*np.pi*pt[0]), 1]])
-
 
 #======================================================================================#
 #                           Initialized Map Classes                                    #
