@@ -36,7 +36,14 @@ def get_points(n):
     return pts
 
 # Lightning fast now
+# Add background parameter
 def plot(Map, n, orbit_len, flag):
+
+    if flag[2] == 1:
+        tmps = get_points(25)
+        for pt in tmps:
+            plot_orbit(Map, pt, 250, plt, (0,0))
+
     pts = get_points(n)
     plt.axis([0, Scale, 0, Scale])
     plt.title('K = {}'.format(Map.k))
@@ -45,6 +52,30 @@ def plot(Map, n, orbit_len, flag):
     plt.savefig('./K={}.png'.format(Map.k)) 
     plt.axes().set_aspect('equal', 'datalim')
     plt.show(block=True) 
+
+def plot_lyapunov(Map, orbit_len, flag):
+
+    if flag[2] == 1:
+        tmps = get_points(25)
+        for pt in tmps:
+            plot_orbit(Map, pt, 250, plt, (0,0))
+
+    pt = get_points(1)[0]
+    plt.axis([0, Scale, 0, Scale])
+    exp = get_lyapunov_exponents(Map, pt, 100)
+    plt.title('L_1 = {}'.format(exp))
+
+    plot_orbit(Map, pt, orbit_len, plt, flag)
+
+    plt.savefig('./K={}.png'.format(Map.k)) 
+    plt.axes().set_aspect('equal', 'datalim')
+    plt.show(block=True) 
+
+# Add lyapunov values when plotting a single orbit
+# What do the lyapunov exponents tell us about periodic islands vs chatoic regions
+# general choaos and dynamical systems with applications and pictures
+# What do I want a bio student to takeaway vs a math prof?
+# specific lists
 
 def plot_orbit(Map, pt, orbit_len, plt, flag):
     # Plots the points along the orbit
@@ -68,11 +99,13 @@ def plot_fastspace(Map, orbit, plt):
         fast.append(fast_v)
     x,y = zip(*orbit[25:])
     u,v = zip(*fast)
-    plt.quiver(x, y, u, v, width=0.001, headwidth='10', headlength='10', color='r')
+    plt.quiver(x, y, u, v, width = 0.001, headwidth='10', headlength='10', color='r',
+    scale_units='x', scale = 16)
 
 # Plot the slowspace at each point
 def plot_slowspace(Map, orbit, plt):
-    K = 25
+    # Setting K=10 prevents our matrix product from becoming singular
+    K = 10 
     slow = []
     for pt in orbit[25:]:
         tmp = find_slowspace(Map, pt, K)
@@ -80,7 +113,8 @@ def plot_slowspace(Map, orbit, plt):
         slow.append(slow_v)
     x,y = zip(*orbit[25:])
     u,v = zip(*slow)
-    plt.quiver(x, y, u, v, width=0.001, headwidth='10', headlength='10', color='b')
+    plt.quiver(x, y, u, v, width=0.001, headwidth='10', headlength='10', color='#00ff00',
+    scale_units='x', scale = 16)
 
 #def gen_std_plots():
 #    std = m.std
@@ -88,6 +122,44 @@ def plot_slowspace(Map, orbit, plt):
 #        std.K = K
 #        for n in [1, 10, 50]:
 #            plot_with_spaces(std, n, 50, (0,1))
+
+def orbit_stability(Map, e, orb_len):
+    # Get an initial point for generating the orbit, and another for computing
+    # the fast space
+    l = get_points(2)
+    x_0, vec = l[0], l[1]
+    orbit = get_orbit(Map, x_0, 0)
+    fast = find_fastspace(Map, x_0, vec, 25)
+    slow = find_slowspace(Map, orbit[-1], 12)
+    
+    # pt is our starting point, x_24
+    # x is the vector \in Tangent(pt) pointing in slow direction
+    # y is our slight perturbation
+    pt = orbit[-1]
+    y = (pt[0]+0.01*slow[0,0], pt[1]+0.01*slow[1,0])
+    z = (pt[0]+0.01*fast[0,0], pt[1]+0.01*fast[1,0])
+
+    tmp_orbit = [pt]
+    x = slow
+    y = slow + e*fast
+    orb_x = [x]
+    orb_y = [y]
+
+    for n in range(orb_len):
+        J = Map.jacobian(pt)
+        orb_x.append(J*orb_x[n])
+        orb_y.append(J*orb_y[n])
+        pt = Map.next(pt)
+        tmp_orbit.append(pt)
+
+    last_fast = normalize(find_fastspace(Map, tmp_orbit[-100], vec, 100))
+    if orb_y[-1][0,0] < 0:
+        orb_y[-1] = -orb_y[-1]
+    last_y = normalize(orb_y[-1])
+    d = LA.norm(last_fast - last_y)
+
+    return [LA.norm(orb_x[n] - orb_y[n]) for n in range(len(orb_x))] + [d]
+
 
 #=================================================================================#
 #                           Fast/Slow Spaces                                      #
@@ -97,7 +169,7 @@ def get_jacobian_iterate(Map, pt, n):
     tmp = pt
     J = np.eye(2) # Assume we're dealing with 2x2's
     for i in range(0, n):
-        J = check_matrix_size(J)
+        #J = check_matrix_size(J)
         J = Map.jacobian(tmp)*J
         tmp = Map.next(tmp)
     return J
@@ -106,12 +178,20 @@ def get_jacobian_iterate(Map, pt, n):
 def find_fastspace(Map, pt, vec, K):
     v = np.matrix('{};{}'.format(vec[0], vec[1]))
     J = get_jacobian_iterate(Map, pt, K)
-    return (normalize(J*v))
+    tmp = normalize(J*v)
+    if tmp[0,0] < 0:
+        return -tmp
+    else:
+        return tmp
 
 def find_slowspace(Map, pt, n):
     v = np.matrix('0;1') # This is in the tangent space of x_25 if pt=x_0
     J = get_jacobian_iterate(Map, pt, n)
-    return (normalize(np.linalg.solve(J, v)))
+    tmp = normalize(np.linalg.solve(J, v))
+    if tmp[0,0] < 0:
+        return -tmp
+    else:
+        return tmp
 
 # This function needs to be redone as find_fastspace doesn't behave nicely anymore. 
 def get_info(Map, pt, vec, n):
@@ -124,17 +204,13 @@ def get_info(Map, pt, vec, n):
 #=================================================================================#
 
 # Compute J^N at pt, then take the SVD of J^N to find the Lyapunov exponents
-def L_exponents(Map, pt):
-    N = 10
-    tmp = pt 
-    J = np.eye(2) # Assume 2x2
-    for i in range(0, N):
-        J = J*Map.jacobian(tmp)
-        tmp = Map.next(pt)
-    (U,D,V) = compute_SVD(J)
-    l1 = np.log(D[0,0])/float(N)
-    l2 = np.log(D[1,1])/float(N)
-    print ('Lambda_1 = {} \nLambda_2 = {}.'.format(l1, l2))
+def get_lyapunov_exponents(Map, pt, n):
+    J = get_jacobian_iterate(Map, pt, n) 
+    m = np.log((abs(J[0,0]) + abs(J[0,1]) + abs(J[1,0]) + abs(J[1,1])))/n
+    #(U,D,V) = compute_SVD(J)
+    #l1 = np.log(D[0,0])/float(n)
+    #l2 = np.log(D[1,1])/float(n)
+    return (m)
 
 # Here we assume that det(A)=1 and that a_ij < 1000
 # Computes the SVD decomposition of a matrix by looking at the eigenvectors of
@@ -159,9 +235,10 @@ def normalize(vec):
 # If the matrix is too large, normalize its entries by dividing through by the sup norm. 
 def check_matrix_size(A): 
     l = [A[0,0], A[0,1], A[1,0], A[1,1]]
-    m = max(l)
-    if len(str(m)) > 7:
+    m = max([abs(x) for x in l])
+    if m > 1000000:
         tmp = [x/m for x in l]
+        print (np.matrix([[tmp[0], tmp[1]], [tmp[2], tmp[3]]]))
         return np.matrix([[tmp[0], tmp[1]], [tmp[2], tmp[3]]])
     else:
         return A
